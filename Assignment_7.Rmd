@@ -1,0 +1,180 @@
+---
+title: "Assignment 7"
+author: "Mia Kuntz"
+date: "7 November 2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, warning=FALSE, message=FALSE}
+library(rvest)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(janitor)
+```
+
+# Task number 3
+I have chosen the third task of the assignment, where I will show another interesting aspect of the police killing data set via data visualisation.
+
+## Scraping the data set
+I use the same approach to scraping the data set from the internet as Adela.
+```{r url}
+url <- "http://web.archive.org/web/20200502072010/https://killedbypolice.net/kbp2020"
+url_html <- read_html(url)
+```
+
+I then extract the HTML table, which I then unlist and coerce into a data frame.
+```{r scrape-function}
+scrape_police_kill <- function(website){
+	url <- read_html(website)
+	annual_table <- url %>% 
+ 			html_nodes("table") %>%
+ 			html_table()
+  annual_table <- do.call(cbind,unlist(annual_table, recursive = FALSE))
+ }
+```
+
+### Writing the loop
+I then write a loop, where I apply the `scrape_police_kill()` function to the year 2013 and onward. I use the `head()` and `tail()` function to check, that the function actually goes all the back back to 2013 and all the way forward to 2020. 
+```{r loop}
+mastertable=NULL
+
+for (year in 2013:2020){  
+	print(year)
+	url <- "http://web.archive.org/web/20200502072010/https://killedbypolice.net/kbp"  
+	website <- paste0(url,year) 
+	annual_table <- scrape_police_kill(website)
+	mastertable <- rbind(mastertable, annual_table) 
+	}
+head(mastertable,2)
+tail(mastertable)
+```
+
+## Cleaning the scraped data set
+To clean up the data set and make it ready for the data visualisations, I first cast it into a tibble.
+```{r clean-data}
+mastertable <- as_tibble(mastertable)
+str(mastertable)
+```
+
+I then change the `Age` data to numbers, and rename the `*`.
+```{r wrangle-columns, message = FALSE, warning=FALSE}
+library(tidyverse)
+data <- mastertable %>% 
+	mutate(Age = as.numeric(Age))  %>% 
+	rename(Method = "*") 
+```
+
+I then change the date columns format to be consistent throughout all years, where I first change the data type from characters to date. I then check to see if the change was succesful. 
+```{r clean-dates, warning = FALSE}
+library(lubridate)
+
+data <- data %>%
+	mutate(Date =
+			case_when(
+				grepl("201[34]", Date) ~ mdy(Date),
+				!grepl("201[34]",Date) ~ ymd(Date)),
+					Year = year(Date))
+tail(data$Year)
+class(data$Date)
+class(data$Year)
+length(which(is.na(data$Date)))
+length(which(is.na(data$Year)))
+```
+
+## Exporting the data
+After scraping and cleaning the data set, I can now export it to a file for my later use
+```{r write-to-csv}
+write_csv(data,"WebscrapingPoliceKillings-master/data/policekillings202210")
+```
+
+## Data visualisation 
+Now that I have prepared the data set, it is now possible to create another meaningful way of shedding light on some of the findings, other than what Adela has already made in her file.
+
+### Police killings by state - Development
+To shed light on the rising of police shootings, I take inspiration in Adelas plots of police killings by state.
+
+The following visualisations will be using the state populations from the following website:
+https://www2.census.gov/programs-surveys/popest/tables/
+
+I download the *ggplot2*, *ggridges*, *statebins* and *viridis* libraries to use for the rest of the assignment. I will be looking at the year 2020 to see whether the top 3 states from the year 2019 have changed.
+```{r map 2020}
+library(ggplot2)
+library(ggridges)
+library(statebins)
+library(viridis)
+
+state_abb <- data_frame(state_name = state.name,
+                        state_abb = state.abb)
+
+state_populations <- readr::read_csv("WebscrapingPoliceKillings-master/data-raw/nst-est2020.csv")
+
+state_populations <-  
+  state_populations %>% 
+  mutate(state_name = gsub("\\.", "", X__1)) %>%
+  left_join(state_abb)
+
+by_state20 <- data %>% 
+  filter(Year == 2020) %>% 
+  group_by(State) %>% 
+  tally() %>% 
+  left_join(state_abb, by = c('State' = 'state_abb')) %>% 
+  filter(!is.na(state_name)) %>% 
+  left_join(state_populations) %>% 
+  mutate(per_n_people = (n / 2020) * 1000000)
+
+ggplot(by_state20, 
+       aes(state = state_name, 
+           fill = n)) +
+  geom_statebins() +
+  coord_equal() +
+  scale_fill_viridis() +
+  theme_statebins() +
+  labs(title = "Total number of people killed by police \nin each state in 2020") +
+  theme(legend.title=element_blank()) 
+```
+
+The result is very much the same as the plot from 2019, with Texas and California in the top, with Florida having experienced even more shootings in this year compared to 2019.
+ 
+In the file made by Adele it was concluded, that these three states have been in the lead for most police killings all the way back to at least 2016. But what about back in 2013, where this data set started to record the killings?
+```{r map 2013}
+state_abb <- data_frame(state_name = state.name,
+                        state_abb = state.abb)
+
+state_populations <- readr::read_csv("WebscrapingPoliceKillings-master/data-raw/nst-est2013-01.csv")
+
+state_populations <-  
+  state_populations %>% 
+  mutate(state_name = gsub("\\.", "", X__1)) %>%
+  left_join(state_abb)
+
+by_state13 <- data %>% 
+  filter(Year == 2013) %>% 
+  group_by(State) %>% 
+  tally() %>% 
+  left_join(state_abb, by = c('State' = 'state_abb')) %>% 
+  filter(!is.na(state_name)) %>% 
+  left_join(state_populations) %>% 
+  mutate(per_n_people = (n / 2013) * 1000000)
+
+ggplot(by_state13, 
+       aes(state = state_name, 
+           fill = n)) +
+  geom_statebins() +
+  coord_equal() +
+  scale_fill_viridis() +
+  theme_statebins() +
+  labs(title = "Total number of people killed by police \nin each state in 2013") +
+  theme(legend.title=element_blank()) 
+```
+
+As in the later years, we see in this data plot that the states of California, Florida and Texas were also the top three states in relation to most police killings, with Arizona a close fourth.
+
+As seen in the data plot, not many states are shown to have been recorded by the data website as having had a police killing in the year 2013. Compared to 2020, where 46 states were reported to have at least one police killing, only 29 states are represented in 2013. This could be due to the, sadly, rising levels of police killings in the United States, but can probably be explained by the fact, that we in later years are reporting these incidents more often than what was done back in 2013, and that the data set is more or less "incomplete" in regards to earlier years.
+
+
+
