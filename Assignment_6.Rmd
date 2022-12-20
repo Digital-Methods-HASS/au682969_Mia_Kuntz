@@ -1,0 +1,82 @@
+---
+title: "Assignment 6"
+author: "Mia Kuntz"
+date: "20 December 2022"
+output: html_document
+---
+
+# Installing packages
+I first have to install the necessary packages and libraries for my code to work.
+```{r libraries}
+library(tidyverse)
+library(here)
+library(lubridate)
+```
+
+
+# 1. Task - Calculating GDP
+## Loading the data set and checking class
+In order to complete the first task of the assignment, I first have to read the data *gaminder_data* into my script. I check the working directory before reading in the csv file, and thereafter check the class of the file when loaded. 
+```{r loading data}
+getwd()
+gapminder <- read.csv("gapminder_data.csv")
+class(gapminder)
+```
+The class shows as a data frame.
+
+## Defining GDP function using defensive functions
+The following code is the defensive function I will use to calculate GDP for different nations.
+```{r defining function}
+calcGDP <- function(dat, year=NULL, country=NULL) {
+  if(!is.null(year)) {
+    dat <- dat[dat$year %in% year, ]
+  }
+  if (!is.null(country)) {
+    dat <- dat[dat$country %in% country,]
+  }
+  gdp <- dat$pop * dat$gdpPercap
+
+  new <- cbind(dat, gdp=gdp)
+  return(new)
+}
+```
+
+## Calculating the GDP of Denmark in the years 1967, 1977, 1987, 1997, 2007, and 2017
+By using the defensive function above, I am able to calculate the GDP of Denmark in the given years.
+```{r DK GDP}
+calcGDP(gapminder, year = c(1952, 1977, 1987, 1997, 2007), country = "Denmark")
+```
+It is worth noting that the year 2017 was given as a task, but could not be calculated due to data not being available.
+
+# 2. Task - Creating script
+## Assigning objects
+In order to create the script given in the 2. task of the assignment, I first have to create different objects pertaining to the unique identifications we need in the script. 
+```{r assigning objects}
+candidateCountries <- grep("^B", unique(gapminder$country), value=TRUE)
+lowerThreshold <- 50
+upperThreshold <- 70
+```
+
+## Loop
+Following script uses loops to check for the given conditions of the task. 
+```{r loop}
+for (iCountry in candidateCountries){
+  tmp <- mean(gapminder[gapminder$country == iCountry, "lifeExp"])
+
+  if(tmp < lowerThreshold){
+    cat("Average Life Expectancy in", iCountry, "is less than", lowerThreshold, "\n")
+  }
+  else if(tmp > lowerThreshold && tmp < upperThreshold){
+    cat("Average Life Expectancy in", iCountry, "is between", lowerThreshold, "and", upperThreshold, "\n")
+  }
+  else{
+    cat("Average Life Expectancy in", iCountry, "is greater than", upperThreshold, "\n")
+  }
+  rm(tmp)
+}
+```
+This shows whether  countries which starts with B in the *gapminder_data* either has a life expectancy of under 50, between 50 and 70, or above 70. 
+
+
+
+
