@@ -508,7 +508,7 @@ library(viridis)</code></pre>
                         state_abb = state.abb)</code></pre>
 <pre><code>## Warning: `data_frame()` was deprecated in tibble 1.1.0.
 ## ℹ Please use `tibble()` instead.</code></pre>
-<pre class="r"><code>state_populations &lt;- readr::read_csv(&quot;WebscrapingPoliceKillings-master/data-raw/nst-est2020.csv&quot;)</code></pre>
+<pre class="r"><code>state_populations &lt;- readr::read_csv(&quot;nst-est2020.csv&quot;)</code></pre>
 <pre><code>## New names:
 ## • `` -&gt; `...1`</code></pre>
 <pre><code>## Rows: 63 Columns: 11
@@ -553,7 +553,7 @@ record the killings?</p>
 <pre class="r"><code>state_abb &lt;- data_frame(state_name = state.name,
                         state_abb = state.abb)
 
-state_populations &lt;- readr::read_csv(&quot;WebscrapingPoliceKillings-master/data-raw/nst-est2013-01.csv&quot;)</code></pre>
+state_populations &lt;- readr::read_csv(&quot;nst-est2013-01.csv&quot;)</code></pre>
 <pre><code>## New names:
 ## Rows: 63 Columns: 11
 ## ── Column specification
